@@ -1,3 +1,4 @@
+#define IMAGE_T std::vector<std::vector<double>>
 #include "../src.hpp"
 #include <chrono>
 #include <iostream>

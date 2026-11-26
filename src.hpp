@@ -4,7 +4,6 @@
 #include <array>
 #include <cmath>
 #include <vector>
-typedef std::vector<std::vector<double>> IMAGE_T;
 namespace digit_recognition {
 static const char* const samples[100] = {
     "00815bd8d81b00171bf6fdfda000150e80e3fdfdfdf72700120778f6fdfdfdfdfdfdcd00110aa4fdfefdbc67fdfdfdd1001030d1fdfdf358210592fdfde117000e30e9fdfdc313000336fbfdfd72000d0ad1fdf6800d00040ad1fde21a000d5afdfd80000638fdfdd1000d75f2fdc30d000668fdfdd1000df4fefe16000625fffefec3000c63fafda20700051ba4fdfdd91e000cd2fde82100068ffdfdfd83000c06d6fdc600067bfcfdfdc50f000c43fdfdc6000547e3fde07e13000d6afdfdc600031c89fefdfd22000facfdfde17a7abdeffdfef66c01000f37f6fdfdfdfdfdfdfde5400012b0fdfdfdfdfdfdba1d00130d5bd7fdfdba3d05007e",
@@ -108,13 +107,14 @@ static const char* const samples[100] = {
     "00d0033ee8feff6f00143072bcfdfdfdfd9c00130cf1fdfdfdf9fdfd9c00120ebcfdfde16616eefd9c001252fdfd9a210002eefde57c001152fde620000209effdfde2001152fdeb4a3149e9fdfdfde2001136f5fdfdfdfdfdfdfdfde20012a7fdfdfdfdf87f7afde20012045cae925c3b00013cfde200193cfde2001974fde20019a8fde20019a8fde20019a8fd7b001806befd77001842fdfd4b001882fdfd0a001882fdfd0a001826fd7d020025",
     "00b215d2fdfdfffda22300135bd5fcfcfcfdfcfcf6690f001016dbfcfcde3a2c79ebfcfc62001041fcfb8f07000309e9fca4000f05b8fca900069cfcb705000e17fcfc83000523f6fcfc15000e0cd2fce90500020245f0fcfcfc15000f59f3fcad2d2da8fcfcfcfcc609001089f6fcfcfcfdfcfcfcfc5300121e77fcfcbf8ee9fcfc37001743fdfdb700188ffcfc580018b0fcfc5800172af9fce70400178ffcfce600188ffcfc6a0018f4fcfc0a0018fdfceb090018fdfcb70400189dfcfc0a0042"
 };
+using Image = std::vector<std::vector<double>>;
 constexpr int side = 24;
 constexpr int area = side * side;
 struct Feature {
     std::array<float, area> ink{}, dx{}, dy{};
 };
 
-inline double sample(const IMAGE_T &img, double y, double x) {
+inline double sample(const Image &img, double y, double x) {
     int iy = static_cast<int>(std::floor(y));
     int ix = static_cast<int>(std::floor(x));
     double result = 0;
@@ -127,7 +127,7 @@ inline double sample(const IMAGE_T &img, double y, double x) {
     return result;
 }
 
-inline Feature extract(const IMAGE_T &img, bool deskew) {
+inline Feature extract(const Image &img, bool deskew) {
     double mass = 0, cx = 0, cy = 0;
     for (int y = 0; y < static_cast<int>(img.size()); ++y)
         for (int x = 0; x < static_cast<int>(img[y].size()); ++x) {
@@ -174,8 +174,8 @@ inline Feature extract(const IMAGE_T &img, bool deskew) {
 struct Reference {
     Feature plain, straight;
 };
-inline IMAGE_T reference_image(int k) {
-    IMAGE_T img(28, std::vector<double>(28));
+inline Image reference_image(int k) {
+    Image img(28, std::vector<double>(28));
     auto hex = [](char c) { return c <= '9' ? c-'0' : c-'a'+10; };
     int offset = 0;
     auto byte = [&]() {
@@ -194,7 +194,7 @@ inline const std::array<Reference,100>& references() {
     static const auto refs = [] {
         std::array<Reference,100> result;
         for (int k = 0; k < 100; ++k) {
-            IMAGE_T img = reference_image(k);
+            Image img = reference_image(k);
             result[k] = {extract(img, false), extract(img, true)};
         }
         return result;
@@ -223,7 +223,7 @@ inline float distance(const Feature &a, const Feature &b) {
     return sum;
 }
 
-inline int classify(const IMAGE_T &img, int excluded = -1) {
+inline int classify(const Image &img, int excluded = -1) {
     Feature a = extract(img, false), b = extract(img, true);
     const auto &refs = references();
     float best = 1e9f;
@@ -238,4 +238,4 @@ inline int classify(const IMAGE_T &img, int excluded = -1) {
 }
 
 }
-inline int judge(IMAGE_T &img) { return digit_recognition::classify(img); }
+inline int judge(std::vector<std::vector<double>> &img) { return digit_recognition::classify(img); }

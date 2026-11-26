@@ -1,10 +1,11 @@
+using Image = std::vector<std::vector<double>>;
 constexpr int side = 24;
 constexpr int area = side * side;
 struct Feature {
     std::array<float, area> ink{}, dx{}, dy{};
 };
 
-inline double sample(const IMAGE_T &img, double y, double x) {
+inline double sample(const Image &img, double y, double x) {
     int iy = static_cast<int>(std::floor(y));
     int ix = static_cast<int>(std::floor(x));
     double result = 0;
@@ -17,7 +18,7 @@ inline double sample(const IMAGE_T &img, double y, double x) {
     return result;
 }
 
-inline Feature extract(const IMAGE_T &img, bool deskew) {
+inline Feature extract(const Image &img, bool deskew) {
     double mass = 0, cx = 0, cy = 0;
     for (int y = 0; y < static_cast<int>(img.size()); ++y)
         for (int x = 0; x < static_cast<int>(img[y].size()); ++x) {
@@ -64,8 +65,8 @@ inline Feature extract(const IMAGE_T &img, bool deskew) {
 struct Reference {
     Feature plain, straight;
 };
-inline IMAGE_T reference_image(int k) {
-    IMAGE_T img(28, std::vector<double>(28));
+inline Image reference_image(int k) {
+    Image img(28, std::vector<double>(28));
     auto hex = [](char c) { return c <= '9' ? c-'0' : c-'a'+10; };
     int offset = 0;
     auto byte = [&]() {
@@ -84,7 +85,7 @@ inline const std::array<Reference,100>& references() {
     static const auto refs = [] {
         std::array<Reference,100> result;
         for (int k = 0; k < 100; ++k) {
-            IMAGE_T img = reference_image(k);
+            Image img = reference_image(k);
             result[k] = {extract(img, false), extract(img, true)};
         }
         return result;
@@ -113,7 +114,7 @@ inline float distance(const Feature &a, const Feature &b) {
     return sum;
 }
 
-inline int classify(const IMAGE_T &img, int excluded = -1) {
+inline int classify(const Image &img, int excluded = -1) {
     Feature a = extract(img, false), b = extract(img, true);
     const auto &refs = references();
     float best = 1e9f;
