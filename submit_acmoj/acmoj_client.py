@@ -68,7 +68,7 @@ class ACMOJClient:
 
         except requests.exceptions.RequestException as e:
             print(f"API Request failed: {e}")
-            if 'response' in locals() and response:
+            if 'response' in locals() and response is not None:
                 print(f"Response text: {response.text}")
             return None
 

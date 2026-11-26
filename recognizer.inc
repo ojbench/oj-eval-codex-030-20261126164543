@@ -64,14 +64,27 @@ inline Feature extract(const IMAGE_T &img, bool deskew) {
 struct Reference {
     Feature plain, straight;
 };
+inline IMAGE_T reference_image(int k) {
+    IMAGE_T img(28, std::vector<double>(28));
+    auto hex = [](char c) { return c <= '9' ? c-'0' : c-'a'+10; };
+    int offset = 0;
+    auto byte = [&]() {
+        int value = 16*hex(samples[k][offset])+hex(samples[k][offset+1]);
+        offset += 2;
+        return value;
+    };
+    for (int p = 0; p < 784;) {
+        int value = byte();
+        if (value == 0) p += byte();
+        else { img[p/28][p%28] = value/255.0; ++p; }
+    }
+    return img;
+}
 inline const std::array<Reference,100>& references() {
     static const auto refs = [] {
         std::array<Reference,100> result;
-        auto hex = [](char c) { return c <= '9' ? c-'0' : c-'a'+10; };
         for (int k = 0; k < 100; ++k) {
-            IMAGE_T img(28, std::vector<double>(28));
-            for (int p = 0; p < 784; ++p)
-                img[p/28][p%28] = (16*hex(samples[k][2*p])+hex(samples[k][2*p+1]))/255.0;
+            IMAGE_T img = reference_image(k);
             result[k] = {extract(img, false), extract(img, true)};
         }
         return result;

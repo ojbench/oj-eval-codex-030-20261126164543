@@ -11,8 +11,20 @@ for label in range(10):
         header, width, maximum, pixels = raw.split(b"\n", 3)
         assert header == b"P5" and width == b"28 28" and maximum == b"255"
         assert len(pixels) == 784
-        # Hexadecimal strings preserve all original pixel values exactly.
-        rows.append('    "' + pixels.hex() + '"')
+        # Run-length encode black background pixels without losing precision.
+        encoded = bytearray()
+        p = 0
+        while p < len(pixels):
+            if pixels[p]:
+                encoded.append(pixels[p])
+                p += 1
+            else:
+                end = p + 1
+                while end < len(pixels) and pixels[end] == 0 and end-p < 255:
+                    end += 1
+                encoded.extend((0, end-p))
+                p = end
+        rows.append('    "' + encoded.hex() + '"')
 out = '// Generated from the official supplied samples; see tools/build_header.py.\n'
 out += '#pragma once\n#include <algorithm>\n#include <array>\n#include <cmath>\n#include <vector>\n'
 out += 'typedef std::vector<std::vector<double>> IMAGE_T;\n'
