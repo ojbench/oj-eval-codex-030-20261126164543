@@ -98,6 +98,16 @@ class ACMOJClient:
     def get_submission_detail(self, submission_id: int) -> Optional[Dict]:
         return self._make_request("GET", f"/submission/{submission_id}")
 
+    def submit_source(self, problem_id: int, filename: str) -> Optional[Dict]:
+        # This custom problem's compiler expects the header in the code field,
+        # even though its configured submission language is named "git".
+        with open(filename, encoding="utf-8") as source:
+            data = {"language": "git", "code": source.read()}
+        result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
+        if result and 'id' in result:
+            self._save_submission_id(result['id'])
+        return result
+
     def abort_submission(self, submission_id: int) -> Optional[Dict]:
         return self._make_request("POST", f"/submission/{submission_id}/abort")
 
@@ -112,7 +122,9 @@ def main():
     # Git submission sub-command
     submit_parser = subparsers.add_parser("submit", help="Submit Git repository")
     submit_parser.add_argument("--problem-id", type=int, required=True, help="Problem ID")
-    submit_parser.add_argument("--git-url", type=str, required=True, help="Git repository URL")
+    source = submit_parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--git-url", type=str, help="Git repository URL")
+    source.add_argument("--code-file", type=str, help="Source file for header-based custom judges")
 
     # Sub-command for checking submission status
     status_parser = subparsers.add_parser("status", help="Check submission status")
@@ -131,7 +143,10 @@ def main():
     client = ACMOJClient(args.token)
 
     if args.command == "submit":
-        result = client.submit_git(args.problem_id, args.git_url)
+        if args.code_file:
+            result = client.submit_source(args.problem_id, args.code_file)
+        else:
+            result = client.submit_git(args.problem_id, args.git_url)
     elif args.command == "status":
         result = client.get_submission_detail(args.submission_id)
     elif args.command == "abort":
