@@ -18,3 +18,11 @@
 4. **879453**, commit `8f430d4`: **176.567/200**, 88.2835% recognition accuracy,
    21,731 ms, 5,828,608 bytes. Gradient histograms improved overall accuracy;
    most remaining errors involve 7/9 and 4/9.
+
+5. **879454**, commit `2876996`: **181/200**, **90.5% recognition accuracy**,
+   21,441 ms, 6,033,408 bytes. This is the best and final submission. The judge
+   reports `wrong_answer` because recognition is not perfect, but awards the
+   stated partial score. All five submission attempts have been used.
+
+Final local validation: 94/100 leave-one-out accuracy. The same validation
+passes AddressSanitizer and UndefinedBehaviorSanitizer without diagnostics.

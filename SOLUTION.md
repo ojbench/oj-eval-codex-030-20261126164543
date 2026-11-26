@@ -39,3 +39,6 @@ Adding gradient histograms increases this to 89/100; `tests/compare.cpp` compare
 the topology descriptor at several relative weights using leave-one-out
 validation. Adding the topology descriptor increases this to 94/100.
 This is a small validation set, so judge accuracy may differ.
+
+The final online evaluation scores 181/200 (90.5% accuracy) in 21.441 seconds,
+using about 6 MB of memory. See `SUBMISSIONS.md` for the complete attempt log.
