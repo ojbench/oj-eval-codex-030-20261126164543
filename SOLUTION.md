@@ -10,7 +10,9 @@ translation and size; a second representation removes the horizontal shear
 estimated from image moments. Intensity and horizontal/vertical derivatives
 describe the strokes. Symmetric nearest-template matching permits each local
 feature to move by one pixel. The plain and deskewed distances are combined.
-The nearest reference supplies the predicted label.
+Block-normalized histograms of gradient directions supply a complementary
+description of stroke orientation. Their distance is combined with the local
+deformation distance. The nearest reference supplies the predicted label.
 
 All reference pixels are embedded losslessly in `src.hpp`. The `judge` function
 does no I/O. Initialization is thread-safe and performed once. Runtime is
@@ -29,5 +31,7 @@ g++ -std=c++17 -O2 -Wall -Wextra -pedantic tests/validate.cpp -o /tmp/validate
 ```
 
 The test holds out each reference in turn, preventing self-matches. The initial
-solution correctly classifies 87/100 held-out examples in approximately 0.27 s.
+solution correctly classified 87/100 held-out examples in approximately 0.27 s.
+Adding gradient histograms increases this to 89/100; `tests/compare.cpp` compares
+the two metrics at several relative weights using leave-one-out validation.
 This is a small validation set, so judge accuracy may differ.

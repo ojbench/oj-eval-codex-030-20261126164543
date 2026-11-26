@@ -3,6 +3,7 @@ constexpr int side = 24;
 constexpr int area = side * side;
 struct Feature {
     std::array<float, area> ink{}, dx{}, dy{};
+    std::array<float, 288> hog{};
 };
 
 inline double sample(const Image &img, double y, double x) {
@@ -59,6 +60,40 @@ inline Feature extract(const Image &img, bool deskew) {
             f.dx[p] = (f.ink[p+1]-f.ink[p-1])*0.5f;
             f.dy[p] = (f.ink[p+side]-f.ink[p-side])*0.5f;
         }
+    float cells[4][4][8] = {};
+    for (int y = 1; y < side-1; ++y)
+        for (int x = 1; x < side-1; ++x) {
+            int p = y*side+x;
+            float gx = f.dx[p], gy = f.dy[p];
+            float magnitude = std::sqrt(gx*gx+gy*gy);
+            float angle = std::atan2(gy, gx)*1.273239545f + 8;
+            int bin = static_cast<int>(angle);
+            float fraction = angle-bin;
+            float cellx = (x+0.5f)/6-0.5f, celly = (y+0.5f)/6-0.5f;
+            int ix = static_cast<int>(std::floor(cellx));
+            int iy = static_cast<int>(std::floor(celly));
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx) {
+                    int cx = ix+dx, cy = iy+dy;
+                    if (cx < 0 || cx >= 4 || cy < 0 || cy >= 4) continue;
+                    float w = magnitude*(dx ? cellx-ix : 1-cellx+ix)*
+                              (dy ? celly-iy : 1-celly+iy);
+                    cells[cy][cx][bin%8] += w*(1-fraction);
+                    cells[cy][cx][(bin+1)%8] += w*fraction;
+                }
+        }
+    int h = 0;
+    for (int y = 0; y < 3; ++y)
+        for (int x = 0; x < 3; ++x) {
+            float norm = 0.01f;
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx)
+                    for (float v : cells[y+dy][x+dx]) norm += v*v;
+            norm = std::sqrt(norm);
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx)
+                    for (float v : cells[y+dy][x+dx]) f.hog[h++] = v/norm;
+        }
     return f;
 }
 
@@ -114,6 +149,15 @@ inline float distance(const Feature &a, const Feature &b) {
     return sum;
 }
 
+inline float hog_distance(const Feature &a, const Feature &b) {
+    float d = 0;
+    for (int i = 0; i < 288; ++i) {
+        float v = a.hog[i]-b.hog[i];
+        d += v*v;
+    }
+    return d;
+}
+
 inline int classify(const Image &img, int excluded = -1) {
     Feature a = extract(img, false), b = extract(img, true);
     const auto &refs = references();
@@ -123,6 +167,8 @@ inline int classify(const Image &img, int excluded = -1) {
         if (k == excluded) continue;
         float d = 0.2f*(distance(a, refs[k].plain)+distance(refs[k].plain, a)) +
                   0.3f*(distance(b, refs[k].straight)+distance(refs[k].straight, b));
+        d += 32.0f*(0.4f*hog_distance(a, refs[k].plain)+
+                    0.6f*hog_distance(b, refs[k].straight));
         if (d < best) { best = d; answer = k/10; }
     }
     return answer;
