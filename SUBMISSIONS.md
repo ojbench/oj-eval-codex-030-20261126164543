@@ -14,3 +14,7 @@
 3. **879447**, commit `bb5729d`: **168.633/200**, 84.3165% recognition accuracy,
    22,574 ms, 5,697,536 bytes. The custom judge reports `wrong_answer` for
    partial accuracy. Main confusions are 4/9, 7/9, and 5/6.
+
+4. **879453**, commit `8f430d4`: **176.567/200**, 88.2835% recognition accuracy,
+   21,731 ms, 5,828,608 bytes. Gradient histograms improved overall accuracy;
+   most remaining errors involve 7/9 and 4/9.

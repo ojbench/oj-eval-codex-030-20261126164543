@@ -113,6 +113,7 @@ constexpr int area = side * side;
 struct Feature {
     std::array<float, area> ink{}, dx{}, dy{};
     std::array<float, 288> hog{};
+    std::array<float, 3> holes{};
 };
 
 inline double sample(const Image &img, double y, double x) {
@@ -203,6 +204,38 @@ inline Feature extract(const Image &img, bool deskew) {
                 for (int dx = 0; dx < 2; ++dx)
                     for (float v : cells[y+dy][x+dx]) f.hog[h++] = v/norm;
         }
+    // Average enclosed-background measurements across thresholds to avoid
+    // making a hard topological decision from a single antialiased pixel.
+    for (float threshold : {0.25f, 0.5f, 0.75f}) {
+        bool seen[area] = {};
+        for (int p = 0; p < area; ++p) {
+            if (seen[p] || f.ink[p] >= threshold) continue;
+            int queue[area], begin = 0, end = 1;
+            queue[0] = p; seen[p] = true;
+            bool border = false;
+            float center = 0;
+            while (begin < end) {
+                int q = queue[begin++], y = q/side, x = q%side;
+                center += y;
+                if (x == 0 || y == 0 || x == side-1 || y == side-1) border = true;
+                for (int offset : {-side, -1, 1, side}) {
+                    int r = q+offset;
+                    if (r < 0 || r >= area || (offset == -1 && x == 0) ||
+                        (offset == 1 && x == side-1)) continue;
+                    if (!seen[r] && f.ink[r] < threshold) {
+                        seen[r] = true; queue[end++] = r;
+                    }
+                }
+            }
+            if (!border && end >= 3) {
+                float strength = std::min(1.0f, end/12.0f)/3.0f;
+                float position = center/end/(side-1);
+                f.holes[0] += strength;
+                f.holes[1] += strength*(1-position);
+                f.holes[2] += strength*position;
+            }
+        }
+    }
     return f;
 }
 
@@ -267,6 +300,15 @@ inline float hog_distance(const Feature &a, const Feature &b) {
     return d;
 }
 
+inline float hole_distance(const Feature &a, const Feature &b) {
+    float d = 0;
+    for (int i = 0; i < 3; ++i) {
+        float v = a.holes[i]-b.holes[i];
+        d += v*v;
+    }
+    return d;
+}
+
 inline int classify(const Image &img, int excluded = -1) {
     Feature a = extract(img, false), b = extract(img, true);
     const auto &refs = references();
@@ -278,6 +320,8 @@ inline int classify(const Image &img, int excluded = -1) {
                   0.3f*(distance(b, refs[k].straight)+distance(refs[k].straight, b));
         d += 32.0f*(0.4f*hog_distance(a, refs[k].plain)+
                     0.6f*hog_distance(b, refs[k].straight));
+        d += 32.0f*(0.4f*hole_distance(a, refs[k].plain)+
+                    0.6f*hole_distance(b, refs[k].straight));
         if (d < best) { best = d; answer = k/10; }
     }
     return answer;
